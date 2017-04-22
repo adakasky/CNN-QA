@@ -106,3 +106,9 @@ feature-token-index/
 feature-output-files/
 dev_v1.1/
 input_data/
+src/dev_v1.1.json
+src/content_parser.py
+src/train_v1.1.json
+src/hypothesis/
+src/query/
+src/reference/
