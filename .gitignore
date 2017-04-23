@@ -1,3 +1,9 @@
+# .gitignore
+.gitignore
+
+# IntelliJ
+.idea/
+
 # data files
 data/
 models/
