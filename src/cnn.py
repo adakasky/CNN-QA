@@ -6,20 +6,26 @@ dilated CNN-CNN Encoder-Decoder model of question answering
 
 from __future__ import division
 from __future__ import print_function
+import os
+import sys
 import numpy as np
 
 from keras.models import Model
-from keras.layers import Input, Dense, Conv1D, Embedding, BatchNormalization
+from keras.layers import Input, Dense, Conv1D, Embedding, BatchNormalization, Flatten, LSTM, Bidirectional
 from keras.layers.merge import concatenate
+from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras import backend as K
 
 
 class CNN(object):
-    def __init__(self, word_dim=300, max_sent_len=30, max_doc_len=10, vocab_size=10000, max_cnn_layer=4):
+    def __init__(self, word_dim=100, max_sent_len=50, max_doc_len=20, vocab_size=10000, max_cnn_layer=4,
+                 model_file="../data/"):
         self.word_dim = word_dim
         self.max_sent_len = max_sent_len
         self.max_doc_len = max_doc_len
         self.vocab_size = vocab_size
         self.max_cnn_layer = max_cnn_layer
+        self.model_file = model_file
 
     def build(self):
         question_input = Input((self.max_sent_len,))
@@ -31,9 +37,9 @@ class CNN(object):
         for passage_input in passage_inputs:
             passage_embeddings.append(self.embedding_layer(passage_input))
 
-        encoders = [Conv1D(self.max_sent_len, 3, activation='relu')]
+        encoders = [Conv1D(self.word_dim, 3, activation='relu', padding='same')]
         for i in range(2, self.max_cnn_layer + 1):
-            encoders.append(Conv1D(self.max_sent_len, 3, activation='relu', dilation_rate=i))
+            encoders.append(Conv1D(self.word_dim, 3, activation='relu', dilation_rate=i, padding='same'))
 
         question_encoding = encoders[0](question_embedding)
         for encoder in encoders[1:]:
@@ -47,30 +53,40 @@ class CNN(object):
                 encoding = encoder(encoding)
             passage_encodings.append(encoding)
         passage_encoding = concatenate(passage_encodings)
-        passage_encoding = Dense(self.max_doc_len, activation='relu')(passage_encoding)
+        passage_encoding = Dense(self.word_dim, activation='relu')(passage_encoding)
         passage_encoding = BatchNormalization()(passage_encoding)
 
         merge_layer = concatenate([question_encoding, passage_encoding])
-        decoder = Conv1D(self.max_sent_len, 3, activation='relu', padding='causal')(merge_layer)
+        decoder = Conv1D(self.word_dim, 3, activation='relu', padding='causal')(merge_layer)
         for i in range(2, self.max_cnn_layer + 1):
-            decoder = Conv1D(self.max_sent_len, 3, activation='relu', padding='causal', dilation_rate=i)(decoder)
+            decoder = Conv1D(self.word_dim, 3, activation='relu', padding='causal', dilation_rate=i)(decoder)
 
-        self.model = Model([question_input] + passage_inputs, decoder)
-        self.model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
+        attention = concatenate([question_encoding, decoder])
+        lstm = Bidirectional(LSTM(self.max_sent_len, activation='relu', recurrent_activation='relu',
+                                  dropout=0.1, recurrent_dropout=0.1, return_sequences=True))(attention)
+        softmax = Dense(self.vocab_size + 1, activation='softmax')(lstm)
+        # softmax = Flatten()(softmax)
+
+        self.model = Model([question_input] + passage_inputs, softmax)
+        self.model.compile(loss='sparse_categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
         self.model.summary()
 
-    def compile(self):
-        pass
+    def fit(self, x_train, y_train, epochs=50, batch_size=50, validation_data=None, validation_split=0.1, shuffle=True):
+        earlystop_cb = EarlyStopping(monitor='val_loss', patience=5, verbose=0, mode='auto')
+        check_cb = ModelCheckpoint('../checkpoints/model.{epoch:02d}-{val_loss:.2f}.hdf5', monitor='val_loss',
+                                   verbose=0, save_best_only=True, mode='min')
 
-    def fit(self, x_question, x_passage, y, nb_epoch=50, batch_size=50, shuffle=True):
-        return self.model.fit(np.append(x_question, x_passage, 1), y, nb_epoch=nb_epoch, batch_size=batch_size,
+        return self.model.fit(x_train, y_train, batch_size, epochs, 1, [check_cb], validation_split,
                               shuffle=shuffle)
 
-    def evaluate(self, x_question, x_passage, y, batch_size=50):
-        return self.model.evaluate(np.append(x_question, x_passage, 1), y, batch_size=batch_size)
+    def predict(self, x, batch_size=50):
+        return np.array(self.model.predict(x, batch_size)).argmax(-1)
 
-    def train_on_batch(self, x_question, x_passage, y):
-        return self.model.train_on_batch(np.append(x_question, x_passage, 1), y)
+    def evaluate(self, x, y, batch_size=50):
+        return self.model.evaluate(x, y, batch_size=batch_size)
+
+    def train_on_batch(self, x, y):
+        return self.model.train_on_batch(x, y)
 
     def save(self):
-        pass
+        self.model.save(self.model_file)
