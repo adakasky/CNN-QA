@@ -93,3 +93,22 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+dev_v1.1.json/
+test_public_v1.1.json/
+train_v1.1.json/
+stanford-ner-2016-10-31/
+stanford-parser-full-2016-10-31/
+stanford-postagger-2016-10-31/
+wiki_sg/
+data_exapmle.txt
+feature-token-index/
+feature-output-files/
+dev_v1.1/
+input_data/
+src/dev_v1.1.json
+src/content_parser.py
+src/train_v1.1.json
+src/hypothesis/
+src/query/
+src/reference/
