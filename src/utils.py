@@ -20,8 +20,8 @@ from nltk import sent_tokenize as st
 # embeddings = Word2Vec.load("../data/word2vec.bin")
 
 
-def preprocess(input_file="../data/dev_v1.1.json.gz", vocab_file="../data/vocab.json", data_file="../data/data_dev.txt",
-               max_sent_len=20, max_doc_len=100, vocab_size=10000):
+def preprocess_marco(input_file="../data/dev_v1.1.json.gz", vocab_file="../data/vocab_marco.json",
+                     data_file="../data/marco_dev.txt", max_sent_len=20, max_doc_len=100, vocab_size=10000):
     lines = gzip.open(input_file, 'r').readlines()
     vocab_writer = codecs.open(vocab_file, 'w', "utf-8")
     data_writer = codecs.open(data_file, "w", "utf-8")
@@ -77,8 +77,8 @@ def preprocess(input_file="../data/dev_v1.1.json.gz", vocab_file="../data/vocab.
     data_writer.close()
 
 
-def prepare_data(vocab_file="../data/vocab.json", data_file="../data/data_dev.txt",
-                 output_file="../data/prepared_data_dev.txt", max_sent_len=20, max_doc_len=100):
+def prepare_marco(vocab_file="../data/vocab_marco.json", data_file="../data/marco_dev.txt",
+                  output_file="../data/prepared_marco_dev.txt", max_sent_len=20, max_doc_len=100):
     vocab = codecs.open(vocab_file, 'r', "utf-8")
     vocab = json.load(vocab)
     wtoi = vocab["token_to_index"]
@@ -124,12 +124,12 @@ def prepare_data(vocab_file="../data/vocab.json", data_file="../data/data_dev.tx
     writer.close()
 
 
-def load_data(file="../data/prepared_data_dev.txt", max_sent_len=20, max_doc_len=100, vocab_size=10000):
+def load_marco(file="../data/prepared_marco_dev.txt"):
     data = codecs.open(file, 'r', "utf-8").read().split("\n\n")
 
     x = [[], []]
     y = []
-    for k, content in enumerate(data):
+    for content in data:
         if content == "":
             continue
         lines = content.split("\n")
@@ -138,3 +138,99 @@ def load_data(file="../data/prepared_data_dev.txt", max_sent_len=20, max_doc_len
         y.append([[int(i)] for i in lines[-1].split()])
 
     return [np.array(x[0]), np.array(x[1])], np.array(y)
+
+
+def preprocess_squad(input_file="../data/dev-v1.1.json", char_file="../data/char_squad_dev.json",
+                     data_file="../data/squad_dev.txt", max_sent_len=100, max_doc_len=1000):
+
+    reader = codecs.open(input_file, 'r', "utf-8")
+    data = json.load(reader)["data"]
+    char_writer = codecs.open(char_file, 'w', "utf-8")
+    data_writer = codecs.open(data_file, "w", "utf-8")
+    chars = {}
+
+    for content in data:
+        paragraphs = content["paragraphs"]
+        for paragraph in paragraphs:
+            context = paragraph["context"]
+            for c in context:
+                if c not in chars:
+                    chars[c] = 0
+                chars[c] += 1
+            qas = paragraph["qas"]
+            for qa in qas:
+                question = qa["question"]
+                for c in question:
+                    if c not in chars:
+                        chars[c] = 0
+                    chars[c] += 1
+                answer_start = qa["answers"][0]["answer_start"]
+                answer_end = answer_start + len(qa["answers"][0]["text"])
+                qid = qa["id"]
+                if len(context) < max_doc_len and len(question) < max_sent_len:
+                    data_writer.write("%s\n%s\n%d\t%d\n%s\n\n" % (question, context, answer_start, answer_end, qid))
+
+    sorted_count = sorted(chars.items(), key=lambda t: t[1], reverse=True)
+    sorted_count = list(map(lambda t: t[0], sorted_count))
+    json_out = {"index_to_char": {i + 1: t for i, t in enumerate(sorted_count)},
+                "char_to_index": {t: i + 1 for i, t in enumerate(sorted_count)}}
+
+    json.dump(json_out, char_writer)
+    char_writer.flush()
+    char_writer.close()
+    data_writer.flush()
+    data_writer.close()
+
+
+def prepare_squad(char_file="../data/char_squad_dev.json", data_file="../data/squad_dev.txt",
+                  output_file="../data/prepared_squad_dev.txt", max_sent_len=100, max_doc_len=1000):
+    chars = codecs.open(char_file, 'r', "utf-8")
+    chars = json.load(chars)
+    ctoi = chars["char_to_index"]
+
+    data = codecs.open(data_file, 'r', "utf-8").read().split("\n\n")
+    writer = codecs.open(output_file, 'w', "utf-8")
+
+    def write_chars(text, max_len):
+        for c in text[:-1]:
+            writer.write("%d " % ctoi[c])
+        if len(text) < max_len:
+            writer.write("%d " % ctoi[text[-1]])
+            for i in range(len(text) + 1, max_len):
+                writer.write("0 ")
+            writer.write("0\n")
+        else:
+            writer.write("%d\n" % ctoi[text[-1]])
+
+    for content in data:
+        if content == "":
+            continue
+        piece = content.split("\n")
+        question = piece[0]
+        context = piece[1]
+        offset = piece[2]
+        qid = piece[3]
+        write_chars(question, max_sent_len)
+        write_chars(context, max_doc_len)
+        writer.write("%s\n%s\n\n" % (offset, qid))
+
+    writer.flush()
+    writer.close()
+
+
+def load_squad(file="../data/prepared_squad_dev.txt"):
+    data = codecs.open(file, 'r', "utf-8").read().split("\n\n")
+
+    x = [[], []]
+    y = []
+    ids = []
+    for content in data:
+        if content == "":
+            continue
+        lines = content.split("\n")
+        x[0].append([int(j) for j in lines[0].split()])
+        x[1].append([int(j) for j in lines[1].split()])
+        y.append([int(i) for i in lines[2].split()])
+        ids.append(lines[3])
+
+    return [np.array(x[0]), np.array(x[1])], [np.array(y)[:, 0], np.array(y)[:, 1]], ids

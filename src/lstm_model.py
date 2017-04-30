@@ -1,21 +1,24 @@
 """
-dilated CNN-CNN Encoder-Decoder model of question answering
+LSTM Encoder-Decoder model of question answering
 
 @author: Ao Liu
 """
 
 from __future__ import division
 from __future__ import print_function
-import os
-import sys
+
 import numpy as np
+import tensorflow as tf
 
 from keras import losses
 from keras import backend as K
 from keras.models import Model, load_model
-from keras.layers import Input, Dense, Embedding, BatchNormalization, LSTM, Bidirectional, Reshape
+from keras.layers import Input, Dense, Embedding, BatchNormalization, LSTM, Bidirectional, Reshape, Masking
 from keras.layers.merge import concatenate, add, multiply
 from keras.callbacks import ModelCheckpoint, EarlyStopping
+
+
+np.random.seed(0)
 
 
 class LSTMModel(object):
@@ -31,25 +34,22 @@ class LSTMModel(object):
         passage_input = Input((self.max_doc_len,))
         question_embedding = Embedding(self.vocab_size, self.word_dim, input_length=self.max_sent_len,
                                        mask_zero=True)(question_input)
-        question_encoding = Bidirectional(LSTM(self.word_dim, activation='relu', return_sequences=True))(
+        question_encoding = Bidirectional(LSTM(self.word_dim, activation='relu'))(
             question_embedding)
         question_encoding = BatchNormalization()(question_encoding)
 
         passage_embedding = Embedding(self.vocab_size, self.word_dim, input_length=self.max_doc_len,
                                       mask_zero=True)(passage_input)
-        passage_encoding = Bidirectional(LSTM(self.word_dim, activation='relu', return_sequences=True))(
+        passage_encoding = Bidirectional(LSTM(self.word_dim, activation='relu'))(
             passage_embedding)
         passage_encoding = BatchNormalization()(passage_encoding)
 
-        interaction = concatenate([question_encoding, passage_encoding], 1)
-        # interaction = Dense(self.word_dim, activation='relu')(interaction)
-        decoding = Bidirectional(LSTM(self.word_dim, activation='relu', return_sequences=True))(interaction)
-        decoding = BatchNormalization()(decoding)
+        interaction = concatenate([question_encoding, passage_encoding])
+        interaction = BatchNormalization()(interaction)
+        interaction = Dense(self.max_sent_len, activation='relu')(interaction)
+        interaction = Reshape((self.max_sent_len, 1))(interaction)
 
-        attention = concatenate([question_encoding, decoding], 1)
-        attention = LSTM(self.max_sent_len, activation='relu')(attention)
-        attention = Reshape((self.max_sent_len, 1))(attention)
-        softmax = Dense(self.vocab_size + 1, activation='softmax')(attention)
+        softmax = Dense(self.vocab_size + 1, activation='softmax')(interaction)
 
         def masked_sparse_categorical_crossentropy(y_true, y_pred):
             mask = np.ones((self.max_sent_len, self.vocab_size + 1))
