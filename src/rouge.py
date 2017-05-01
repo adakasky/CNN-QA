@@ -7,8 +7,11 @@
 # Creation Date : 2015-01-07 06:03
 # Author : Ramakrishna Vedantam <vrama91@vt.edu>
 
-# Modifier: Zitao Wang
-# Date: 04-20=2017
+'''
+Modified by:
+Zitao Wang
+zitaownag@umass.edu
+'''
 
 import numpy as np
 import pdb

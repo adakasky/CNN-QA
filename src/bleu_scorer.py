@@ -11,6 +11,13 @@
 # Hao Fang <hfang@uw.edu>
 # Tsung-Yi Lin <tl483@cornell.edu>
 
+
+'''
+Modified by:
+Zitao Wang
+zitaownag@umass.edu
+'''
+
 '''Provides:
 cook_refs(refs, n=4): Transform a list of reference sentences as strings into a form usable by cook_test().
 cook_test(test, refs, n=4): Transform a test sentence as a string (together with the cooked reference sentences) into a form usable by score_cooked().
