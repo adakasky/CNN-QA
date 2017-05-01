@@ -8,12 +8,10 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import tensorflow as tf
 
-from keras import losses
-from keras import backend as K
 from keras.models import Model, load_model
-from keras.layers import Input, Dense, Embedding, BatchNormalization, Conv1D, RepeatVector, Reshape, Flatten, LSTM, ZeroPadding1D
+from keras.layers import Input, Dense, Embedding, BatchNormalization, Conv1D, RepeatVector, Reshape, Flatten, LSTM, \
+    MaxPool1D, TimeDistributed
 from keras.layers.merge import concatenate, add, multiply
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
@@ -32,39 +30,29 @@ class CNNCharModel(object):
         passage_input = Input((self.max_doc_len,))
         question_embedding = Embedding(self.n_chars, self.char_dim, input_length=self.max_sent_len)(
             question_input)
-        question_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='same')(question_embedding)
+        question_encoding = LSTM(self.char_dim, activation='relu')(question_embedding)
         question_encoding = BatchNormalization()(question_encoding)
-        question_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='same', dilation_rate=2)(
-            question_encoding)
-        question_encoding = BatchNormalization()(question_encoding)
-        question_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='same', dilation_rate=4)(
-            question_encoding)
-        question_encoding = BatchNormalization()(question_encoding)
-        question_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='same', dilation_rate=8)(
-            question_encoding)
-        question_encoding = BatchNormalization()(question_encoding)
+        question_encoding = RepeatVector(self.max_doc_len)(question_encoding)
 
         passage_embedding = Embedding(self.n_chars, self.char_dim, input_length=self.max_doc_len)(
             passage_input)
-        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='same')(passage_embedding)
+        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='causal')(passage_embedding)
         passage_encoding = BatchNormalization()(passage_encoding)
-        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='same', dilation_rate=2)(
+        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='causal', dilation_rate=2)(
             passage_encoding)
         passage_encoding = BatchNormalization()(passage_encoding)
-        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='same', dilation_rate=4)(
+        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='causal', dilation_rate=4)(
             passage_encoding)
         passage_encoding = BatchNormalization()(passage_encoding)
-        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='same', dilation_rate=8)(
+        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='causal', dilation_rate=8)(
             passage_encoding)
         passage_encoding = BatchNormalization()(passage_encoding)
-        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='same', dilation_rate=16)(
+        passage_encoding = Conv1D(self.char_dim, 3, activation='relu', padding='causal', dilation_rate=16)(
             passage_encoding)
         passage_encoding = BatchNormalization()(passage_encoding)
 
-        interaction = concatenate([question_encoding, passage_encoding], 1)
-        interaction = Dense(1, activation='relu')(interaction)
-        interaction = Flatten()(interaction)
-        interaction = BatchNormalization()(interaction)
+        interaction = add([passage_encoding, question_encoding])
+        interaction = LSTM(self.char_dim)(interaction)
 
         softmax1 = Dense(self.max_doc_len, activation='softmax')(interaction)
         softmax2 = Dense(self.max_doc_len, activation='softmax')(interaction)
@@ -73,13 +61,14 @@ class CNNCharModel(object):
         self.model.compile(loss='sparse_categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
         self.model.summary()
 
-    def fit(self, x_train, y_train, batch_size=50, epochs=50, validation_data=None, validation_split=0., shuffle=True):
+    def fit(self, x_train, y_train, batch_size=50, epochs=50, verbose=1, validation_data=None, validation_split=0.,
+            shuffle=True):
         earlystop_cb = EarlyStopping(monitor='val_loss', patience=5, verbose=0, mode='auto')
-        check_cb = ModelCheckpoint('../models/cnn_char.{epoch:02d}-{val_loss:.2f}.hdf5', monitor='val_loss',
+        check_cb = ModelCheckpoint('../models/cnn_char_best.hdf5', monitor='val_loss',
                                    verbose=0, save_best_only=True, mode='min')
 
-        return self.model.fit(x_train, y_train, batch_size, epochs, 1, validation_split=validation_split,
-                              validation_data=validation_data, shuffle=shuffle)
+        return self.model.fit(x_train, y_train, batch_size, epochs, verbose, [check_cb],
+                              validation_split=validation_split, validation_data=validation_data, shuffle=shuffle)
 
     def predict(self, x, batch_size=50):
         return np.array(self.model.predict(x, batch_size)).argmax(-1)
@@ -93,6 +82,6 @@ class CNNCharModel(object):
     def save(self, model_file="../models/cnn_char.hdf5"):
         self.model.save(model_file)
 
-    def load(self, model_file="../models/cnn_char.hdf5"):
+    def load(self, model_file="../models/cnn_char_best.hdf5"):
         self.model = load_model(model_file)
         self.model.summary()

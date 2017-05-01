@@ -47,13 +47,14 @@ class LSTMCharModel(object):
         self.model.compile(loss='sparse_categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
         self.model.summary()
 
-    def fit(self, x_train, y_train, batch_size=50, epochs=50, validation_data=None, validation_split=0., shuffle=True):
+    def fit(self, x_train, y_train, batch_size=50, epochs=50, verbose=1, validation_data=None, validation_split=0.,
+            shuffle=True):
         earlystop_cb = EarlyStopping(monitor='val_loss', patience=5, verbose=0, mode='auto')
         check_cb = ModelCheckpoint('../models/lstm_char.{epoch:02d}-{val_loss:.2f}.hdf5', monitor='val_loss',
                                    verbose=0, save_best_only=True, mode='min')
 
-        return self.model.fit(x_train, y_train, batch_size, epochs, 1, [check_cb], validation_split, validation_data,
-                              shuffle)
+        return self.model.fit(x_train, y_train, batch_size, epochs, verbose, [check_cb],
+                              validation_split=validation_split, validation_data=validation_data, shuffle=shuffle)
 
     def predict(self, x, batch_size=50):
         return np.array(self.model.predict(x, batch_size)).argmax(-1)
