@@ -31,5 +31,4 @@ lstm_char.build()
 # plot_model(lstm_char.model, to_file='../models/lstm_char_model.png')
 lstm_char.fit(x_train, y_train, 200, 200, validation_data=(x_dev, y_dev))
 
-lstm_char.save()
-print(lstm_char.predict([x[0][:20], x[1][:20]]))
+print(lstm_char.predict(x_test))

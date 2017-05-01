@@ -9,13 +9,13 @@ from __future__ import print_function
 
 import numpy as np
 from cnn import CNN
-from lstm_model import LSTMModel
+from lstm_char_model import LSTMCharModel
 from utils import load_data
 
 
 x, y = load_data()
 
-lstm = LSTMModel()
-lstm.load()
+lstm_char = LSTMCharModel()
+lstm_char.load()
 
-print(lstm.predict(x))
+print(lstm_char.predict(x))

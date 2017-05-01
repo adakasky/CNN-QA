@@ -13,8 +13,6 @@ import codecs
 import numpy as np
 
 from nltk import word_tokenize as wt
-from nltk import sent_tokenize as st
-
 
 # from gensim.models import Word2Vec
 # embeddings = Word2Vec.load("../data/word2vec.bin")
@@ -234,3 +232,25 @@ def load_squad(file="../data/prepared_squad_dev.txt"):
         ids.append(lines[3])
 
     return [np.array(x[0]), np.array(x[1])], [np.array(y)[:, 0], np.array(y)[:, 1]], ids
+
+
+def get_prediction(model, x_test, y_test, char_file="../data/char_squad_dev.json"):
+    chars = codecs.open(char_file, 'r', "utf-8")
+    chars = json.load(chars)
+    itoc = chars["index_to_char"]
+
+    paragraphs = []
+    for paragraph in x_test[1]:
+        paragraphs.append(''.join(list(map(lambda i: itoc[str(i)] if str(i) in itoc else '', paragraph))))
+
+    y_pred = model.predict(x_test)
+    truths = []
+    predictions = []
+    for (start_truth, end_truth, start_pred, end_pred, paragraph) \
+            in zip(y_test[0], y_test[1], y_pred[0], y_pred[1], paragraphs):
+        truths.append(paragraph[start_truth:end_truth])
+        predictions.append(paragraph[start_pred:end_pred])
+
+    return truths, predictions
+
+

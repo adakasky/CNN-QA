@@ -8,13 +8,10 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import tensorflow as tf
 
-from keras import losses
-from keras import backend as K
 from keras.models import Model, load_model
-from keras.layers import Input, Dense, Embedding, BatchNormalization, LSTM, Bidirectional, RepeatVector, Reshape
-from keras.layers.merge import concatenate, add, multiply
+from keras.layers import Input, Dense, Embedding, BatchNormalization, LSTM, Bidirectional
+from keras.layers.merge import add
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
 np.random.seed(0)
@@ -70,6 +67,6 @@ class LSTMCharModel(object):
     def save(self, model_file="../models/lstm_char.hdf5"):
         self.model.save(model_file)
 
-    def load(self, model_file="../models/lstm.hdf5"):
+    def load(self, model_file="../models/lstm_char_best.hdf5"):
         self.model = load_model(model_file)
         self.model.summary()
