@@ -2,11 +2,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import codecs
-from lstm_char_model import LSTMCharModel
-from utils import load_squad, get_prediction
 from rouge import Rouge
-
+import glob
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 def load_data(references, hypothesis):
     hypo = {idx: [lines.strip()] for (idx, lines) in enumerate(hypothesis)}
@@ -30,42 +30,24 @@ def score(ref, hypo):
 
 if __name__ == '__main__':
 
-    ROUGE_L = 0.
-    x, y, ids = load_squad()
+    ROUGE_L = 0.0
 
-    x_train = [x[0][:6400], x[1][:6400]]
-    y_train = [y[0][:6400], y[1][:6400]]
-    id_train = ids[:6400]
-    x_dev = [x[0][6400:7200], x[1][6400:7200]]
-    y_dev = [y[0][6400:7200], y[1][6400:7200]]
-    id_dev = ids[6400:7200]
-    x_test = [x[0][7200:8100], x[1][7200:8100]]
-    y_test = [y[0][7200:8100], y[1][7200:8100]]
-    ids_test = ids[7200:8100]
+    hyp_file = glob.glob('../hypothesis/*')
+    ref_file = glob.glob('../reference/*')
+    count = []
 
-    lstm = LSTMCharModel()
-    lstm.load()
+    for reference_file, hypothesis_file in zip(ref_file, hyp_file):
+        with open(reference_file) as rf:
+            reference = rf.readlines()
 
-    reference, hypothesis = get_prediction(lstm, x_test, y_test)
+        with open(hypothesis_file) as hf:
+            hypothesis = hf.readlines()
 
-    for ref in reference:
-        name = reference.index(ref)
-        f = codecs.open('../reference/ref' + str(name), 'w', 'utf-8')
-        f.write(ref)
-        f.close()
-
-    for hyp in hypothesis:
-        name = hypothesis.index(hyp)
-        f = codecs.open('../hypothesis/hyp'+ str(name),'w', 'utf-8')
-        f.write(hyp)
-        f.close()
-
-    '''
-    for ref, hyp in zip(reference, hypothesis):
-
-        r, p = load_data(ref, hyp)
-        score_map = score(r, p)
+        ref, hypo = load_data(reference, hypothesis)
+        score_map = score(ref, hypo)
+        count.append(score_map['ROUGE_L'])
         ROUGE_L += score_map['ROUGE_L']
+
+
     print('Average Metric Score for All Review Summary Pairs:')
-    print('Rouge:', ROUGE_L/len(reference))
-    '''
+    print('Rouge:', ROUGE_L/min(len(hyp_file) , len(ref_file)) )
