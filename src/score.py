@@ -8,6 +8,13 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
+
+'''
+Evaluation metrics for our system
+Partially adapted from Harshal Priyadarshi's (Github @harpribot) works on NLP.
+@author: Zitao Wang
+zitaowang@umass.edu
+'''
 def load_data(references, hypothesis):
     hypo = {idx: [lines.strip()] for (idx, lines) in enumerate(hypothesis)}
     raw_refs = [map(str.strip, r) for r in zip(references)]
@@ -50,4 +57,4 @@ if __name__ == '__main__':
 
 
     print('Average Metric Score for All Review Summary Pairs:')
-    print('Rouge:', ROUGE_L/min(len(hyp_file) , len(ref_file)) )
+    print('Rouge:', ROUGE_L)

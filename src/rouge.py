@@ -4,8 +4,7 @@
 # Author : Ramakrishna Vedantam <vrama91@vt.edu>
 
 '''
-Modified by:
-Zitao Wang
+Modified by: Zitao Wang
 zitaownag@umass.edu
 '''
 
@@ -57,10 +56,10 @@ class Rouge():
 
     def compute_score(self, gts, res):
 
-        imgIds = gts.keys()
+        ids = gts.keys()
 
         score = []
-        for id in imgIds:
+        for id in ids:
             try:
                 hypo = res[id]
                 ref  = gts[id]
