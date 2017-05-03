@@ -31,5 +31,4 @@ lstm = LSTMCharModel()
 lstm.load()
 
 y_truth, y_pred = get_prediction(lstm, x_test, y_test)
-print(y_truth)
 
