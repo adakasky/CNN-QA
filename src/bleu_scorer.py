@@ -18,10 +18,7 @@ Zitao Wang
 zitaownag@umass.edu
 '''
 
-'''Provides:
-cook_refs(refs, n=4): Transform a list of reference sentences as strings into a form usable by cook_test().
-cook_test(test, refs, n=4): Transform a test sentence as a string (together with the cooked reference sentences) into a form usable by score_cooked().
-'''
+
 
 import copy
 import sys, math, re
@@ -39,7 +36,7 @@ def precook(s, n=4, out=False):
             counts[ngram] += 1
     return (len(words), counts)
 
-def cook_refs(refs, eff=None, n=4): ## lhuang: oracle will call with "average"
+def cook_refs(refs, eff=None, n=4):
     '''Takes a list of reference sentences for a single segment
     and returns an object that encapsulates everything that BLEU
     needs to know about them.'''
@@ -58,15 +55,9 @@ def cook_refs(refs, eff=None, n=4): ## lhuang: oracle will call with "average"
     elif eff == "average":
         reflen = float(sum(reflen))/len(reflen)
 
-    ## lhuang: N.B.: leave reflen computaiton to the very end!!
-    
-    ## lhuang: N.B.: in case of "closest", keep a list of reflens!! (bad design)
-
     return (reflen, maxcounts)
 
-def cook_test(test, (reflen, refmaxcounts), eff=None, n=4):
-    '''Takes a test sentence and returns an object that
-    encapsulates everything that BLEU needs to know about it.'''
+def cook_test(test, reflen, refmaxcounts, eff=None, n=4):
 
     testlen, counts = precook(test, n, True)
 
@@ -94,7 +85,6 @@ class BleuScorer(object):
     """
 
     __slots__ = "n", "crefs", "ctest", "_score", "_ratio", "_testlen", "_reflen", "special_reflen"
-    # special_reflen is used in oracle (proportional effective ref len for a node).
 
     def copy(self):
         ''' copy the refs.'''
