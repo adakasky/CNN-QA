@@ -8,8 +8,6 @@
 data/
 models/
 checkpoints/
-reference/
-hypothesis/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
