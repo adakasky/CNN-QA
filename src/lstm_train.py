@@ -7,9 +7,6 @@ main script to train the model
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
-from cnn import CNN
-from lstm_model import LSTMModel
 from lstm_char_model import LSTMCharModel
 from utils import load_marco, load_squad
 from keras.utils.vis_utils import plot_model

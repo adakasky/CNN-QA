@@ -8,13 +8,12 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+np.random.seed(0)
 
 from keras.models import Model, load_model
 from keras.layers import Input, Dense, Embedding, BatchNormalization, LSTM, Bidirectional
 from keras.layers.merge import add
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-
-np.random.seed(0)
 
 
 class LSTMCharModel(object):
@@ -49,11 +48,11 @@ class LSTMCharModel(object):
 
     def fit(self, x_train, y_train, batch_size=50, epochs=50, verbose=1, validation_data=None, validation_split=0.,
             shuffle=True):
-        earlystop_cb = EarlyStopping(monitor='val_loss', patience=5, verbose=0, mode='auto')
-        check_cb = ModelCheckpoint('../models/lstm_char.{epoch:02d}-{val_loss:.2f}.hdf5', monitor='val_loss',
+        earlystop_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
+        check_cb = ModelCheckpoint('../models/lstm_char_best.hdf5', monitor='val_loss',
                                    verbose=0, save_best_only=True, mode='min')
 
-        return self.model.fit(x_train, y_train, batch_size, epochs, verbose, [check_cb],
+        return self.model.fit(x_train, y_train, batch_size, epochs, verbose, [earlystop_cb, check_cb],
                               validation_split=validation_split, validation_data=validation_data, shuffle=shuffle)
 
     def predict(self, x, batch_size=50):
